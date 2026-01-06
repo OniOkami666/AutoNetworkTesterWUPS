@@ -6,42 +6,93 @@
 #include <coreinit/screen.h>
 #include <nn/ac.h>
 
-// common printing configuration for the wii u
-void Print(const char* msg) {
-    OSScreenInit();
+#include "Notification.h"
 
-    OSScreenClearBufferEx(SCREEN_TV, 0);
-    OSScreenPutFontEx(SCREEN_TV, 10, 10, msg);
-    OSScreenFlipBuffersEx(SCREEN_TV);
-}
+int NetMonitoring(int argc, const char **argv);
 
-bool AutoNetinit() {
-    nn::ac::Initialize();
+static OSThread netinitThread;
+static bool Running = false;
+static bool Stop = false;
+static uint8_t netThreadStack[0x4000];
+
+constexpr int AC_STATUS_SUCCESS = 0; // Connected
+constexpr int AC_STATUS_CONNECTING = 1; // Connecting
+constexpr int AC_STATUS_FAILED = -1; // Connection Failed
+
+
+bool Net_init() {
+    nn::Result init = nn::ac::Initialize();
+    if (init != 0) {
+        ShowNotification("[AutoNet] Wi-fi initialization failed!");
+        return false;
+    }
     OSSleepTicks(OSMillisecondsToTicks(100));
-    // result comes from the connect function and returns 0 if successful and -1 if failed
-    nn::Result ret = nn::ac::Connect();
 
-    if (ret != 0) {
-        Print("Wi-Fi initialization failed!");
+    nn::Result firstnetinit = nn::ac::Connect();
+    if (firstnetinit != 0) {
+        ShowNotification(" [AutoNet] Initial connection failed!");
         return false;
     }
-    Print("Connecting to the internet...");
-    OSSleepTicks(OSMillisecondsToTicks(500));
 
-    nn::ac::Status stats;
-    nn::Result stat = nn::ac::GetConnectStatus(&stats);
+    ShowNotification("[AutoNet] Wi-Fi Initialized and you're online!");
+    return true;
+}
+int NetMonitoring(int argc, const char **argv) {
+    bool lastConnected = false;
+    bool lastConnecting = false;
 
-    if(stat == 0) {
-        Print("Connection Successful!");
-        return true;
+    while (!Stop) {
+        nn::ac::Status stats;
+        nn::Result res = nn::ac::GetConnectStatus(&stats);
+
+        if (res == AC_STATUS_SUCCESS) {
+            if (!lastConnected) {
+                ShowNotification("[AutoNet] You are connected!");
+                lastConnected = true;
+            }
+            lastConnecting = false;
+            // Sleep long when connected
+            OSSleepTicks(OSMillisecondsToTicks(60 * 60 * 1000)); 
+        }
+        else if (res == AC_STATUS_CONNECTING) {
+            if (!lastConnecting) {
+                ShowNotification("[AutoNet] Connecting...");
+                lastConnecting = true;
+            }
+            
+            OSSleepTicks(OSMillisecondsToTicks(30000)); 
+        }
+        else { // Disconnected or failed
+            if (lastConnected) {
+                ShowNotification("[AutoNet] Disconnected!");
+                lastConnected = false;
+            }
+            lastConnecting = false;
+
+            nn::ac::Connect(); // try reconnect
+            OSSleepTicks(OSMillisecondsToTicks(5000)); 
+        }
     }
-    else if (stat < 0) {
-        Print("Connection Failed!");
-        return false;
+
+    Running = false;
+    return 0;
+}
+void StartNetThread() {
+    if (!Running) {
+        Stop = false;
+        Running = true;
+        
+        int argc = 0;
+
+        OSCreateThread(&netinitThread, NetMonitoring, argc, nullptr, netThreadStack + sizeof(netThreadStack), sizeof(netThreadStack), 30, 0);
+
+        OSResumeThread(&netinitThread);
     }
 }
-
-void AutoNetdeinit() {
-    nn::ac::CloseAll();
-    nn::ac::Finalize();
+void StopNetThread() {
+    if (Running) {
+        Stop = true;
+        OSJoinThread(&netinitThread, nullptr);
+        Running = false;
+    }
 }

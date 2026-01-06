@@ -1,45 +1,51 @@
-# Compiler (absolute path from your environment)
-CXX := /opt/devkitpro/devkitPPC/bin/powerpc-eabi-g++
+# Compiler
+CC := /opt/devkitpro/devkitPPC/bin/powerpc-eabi-g++
+AR := /opt/devkitpro/devkitPPC/bin/powerpc-eabi-ar
+
+# Directories
+SRC_DIR := src
+BUILD_DIR := build
+INCLUDE_DIRS := -Iinclude -Iinclude/notifications \
+                -I/opt/devkitpro/wut/include \
+                -I/opt/devkitpro/wups/include \
+                -I/opt/devkitpro/wums/include
+
+LIB_DIRS := -L/opt/devkitpro/wut/lib \
+            -L/opt/devkitpro/wups/lib \
+            -L/opt/devkitpro/wums/lib
+
+LIBS := -lwut -lwups -lnotifications -lstdc++
 
 # Compiler flags
-CXXFLAGS := -O2 -mhard-float -m32 -Wall -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti -std=c++17
-
-# Linker flags
-LDFLAGS := -Wl,-Map,AutoNetTester.map -Wl,--gc-sections -nostartfiles
-
-# Include paths
-INCLUDES := -I./include \
-            -I/opt/devkitpro/wups/include \
-            -I/opt/devkitpro/wut/include \
-            -I/opt/devkitpro/wut/include/coreinit \
-            -I/opt/devkitpro/devkitPPC/include \
-            -I/opt/devkitpro/portlibs/ppc/include
+CFLAGS := -O2 -Wall -std=c++17 $(INCLUDE_DIRS)
+LDFLAGS := $(LIB_DIRS) $(LIBS) -Wl,-Ttext,0x81800000
 
 # Source files
-SRC := src/net.cpp src/main.cpp
-OBJ := $(SRC:.cpp=.o)
+SRCS := $(SRC_DIR)/main.cpp \
+        $(SRC_DIR)/net.cpp \
+        $(SRC_DIR)/Notification.cpp
 
-# Output
-TARGET := AutoNetTester.rpx
+# Object files
+OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 
-# ==============================
-# Build rules
-# ==============================
+# Output plugin
+OUTPUT := $(BUILD_DIR)/autonetworktester.wps
 
-all: $(TARGET)
+#--------------------------------------
+# Rules
+#--------------------------------------
 
-# Compile each .cpp into .o
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+all: $(OUTPUT)
 
-# Link object files into .rpx
-$(TARGET): $(OBJ)
-	$(CXX) $(OBJ) $(LDFLAGS) -o $@
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean build files
+$(OUTPUT): $(OBJS)
+	$(CC) $(OBJS) $(LDFLAGS) -o $@
+	@echo "Plugin built: $@"
+
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -rf $(BUILD_DIR)
 
-# Optional: show include paths
-show-includes:
-	@echo $(INCLUDES)
+.PHONY: all clean

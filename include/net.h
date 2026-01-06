@@ -1,4 +1,6 @@
 #pragma once 
 
-bool AutoNetinit();
-void AutoNetdeinit();
+bool Net_init();
+void StartNetThread();
+int NetMonitoring(int argc, const char **argv);
+void StopNetThread();
