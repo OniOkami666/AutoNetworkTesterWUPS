@@ -65,7 +65,7 @@ void StartNetThread() {
     if (!running) {
         stop = false;
         running = true;
-        OSCreateThread(&netThread, NetMonitoring, 0, nullptr, netThreadStack + sizeof(netThreadStack), sizeof(netThreadStack), 30, 0);
+        OSCreateThread(&netThread, NetMonitoring, 0, nullptr, netThreadStack, sizeof(netThreadStack), 30, 0);
         OSResumeThread(&netThread);
     }
 }
