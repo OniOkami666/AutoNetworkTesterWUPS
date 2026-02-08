@@ -48,7 +48,7 @@ int NetMonitoring(int argc, const char **argv) {
            // ShowNotification("[AutoNet] Connected!");
             OSSleepTicks(OSMillisecondsToTicks(tick));
         } else if (res == 1) { // Connecting
-            ShowNotification("[AutoNet] Connecting...");
+           // ShowNotification("[AutoNet] Connecting...");
             OSSleepTicks(OSMillisecondsToTicks(15000));
         } else { // Disconnected / failed
            // ShowNotification("[AutoNet] Not connected, retrying...");
@@ -74,6 +74,6 @@ void StopNetThread() {
     if (running) {
         stop = true;
         OSJoinThread(&netThread, nullptr);
-        running = false;
     }
+    running = false;
 }
