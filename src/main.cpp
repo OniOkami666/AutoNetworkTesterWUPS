@@ -6,6 +6,10 @@
 #include "Notification.h"
 #include "net.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Just some configuration stuff, no need to worry about it
 WUPS_PLUGIN_NAME("Auto Network Tester");
 WUPS_PLUGIN_DESCRIPTION("A plugin to automatically connect to the selected wifi profile");
@@ -15,7 +19,7 @@ WUPS_PLUGIN_LICENSE("GPL");
 
 ON_APPLICATION_START() {
     NotificationModule_InitLibrary();
-    // StartNetThread(); 
+    StartNetThread(); 
     ShowNotification("[AutoNet] initialized!");
 }
 
@@ -23,3 +27,7 @@ ON_APPLICATION_ENDS() {
     StopNetThread();
     NotificationModule_DeInitLibrary();
 }
+
+#ifdef __cplusplus
+}
+#endif
