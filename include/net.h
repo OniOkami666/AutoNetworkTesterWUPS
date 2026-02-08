@@ -1,6 +1,12 @@
-#pragma once 
+#pragma once
 
-bool Net_init();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void StartNetThread();
-int NetMonitoring(int argc, const char **argv);
 void StopNetThread();
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,98 +1,79 @@
-// Made by Oniokami666
+/*     
+    AutoNetworkTesterWUPS
+    Copyright (C) 2025 Cody (OniOkami666) Shimizu
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. 
+*/
 
 #include <coreinit/thread.h>
 #include <coreinit/time.h>
-#include <coreinit/debug.h>
-#include <coreinit/screen.h>
 #include <nn/ac.h>
-
+#include <notifications/notifications.h>
 #include "Notification.h"
+#include "net.h"
 
-int NetMonitoring(int argc, const char **argv);
+static OSThread netThread;
+static bool running = false;
+static bool stop = false;
+static uint8_t netThreadStack[0x8000]; // 32 kb
 
-static OSThread netinitThread;
-static bool Running = false;
-static bool Stop = false;
-static uint8_t netThreadStack[0x4000];
-
-constexpr int AC_STATUS_SUCCESS = 0; // Connected
-constexpr int AC_STATUS_CONNECTING = 1; // Connecting
-constexpr int AC_STATUS_FAILED = -1; // Connection Failed
-
-
-bool Net_init() {
-    nn::Result init = nn::ac::Initialize();
-    if (init != 0) {
-        ShowNotification("[AutoNet] Wi-fi initialization failed!");
-        return false;
-    }
-    OSSleepTicks(OSMillisecondsToTicks(100));
-
-    nn::Result firstnetinit = nn::ac::Connect();
-    if (firstnetinit != 0) {
-        ShowNotification(" [AutoNet] Initial connection failed!");
-        return false;
-    }
-
-    ShowNotification("[AutoNet] Wi-Fi Initialized and you're online!");
-    return true;
-}
 int NetMonitoring(int argc, const char **argv) {
-    bool lastConnected = false;
-    bool lastConnecting = false;
+    bool initialized = false;
 
-    while (!Stop) {
+    int tick = 60 * 60 * 1000;
+    while (!stop) {
+        if (!initialized) {
+            if (nn::ac::Initialize() != 0) {
+                OSSleepTicks(OSMillisecondsToTicks(5000)); // retry in 5 sec
+                continue;
+            }
+            initialized = true;
+        }
+
         nn::ac::Status stats;
         nn::Result res = nn::ac::GetConnectStatus(&stats);
 
-        if (res == AC_STATUS_SUCCESS) {
-            if (!lastConnected) {
-                ShowNotification("[AutoNet] You are connected!");
-                lastConnected = true;
-            }
-            lastConnecting = false;
-            // Sleep long when connected
-            OSSleepTicks(OSMillisecondsToTicks(60 * 60 * 1000)); 
-        }
-        else if (res == AC_STATUS_CONNECTING) {
-            if (!lastConnecting) {
-                ShowNotification("[AutoNet] Connecting...");
-                lastConnecting = true;
-            }
-            
-            OSSleepTicks(OSMillisecondsToTicks(30000)); 
-        }
-        else { // Disconnected or failed
-            if (lastConnected) {
-                ShowNotification("[AutoNet] Disconnected!");
-                lastConnected = false;
-            }
-            lastConnecting = false;
-
-            nn::ac::Connect(); // try reconnect
-            OSSleepTicks(OSMillisecondsToTicks(5000)); 
+        if (res == 0) { // Connected
+            ShowNotification("[AutoNet] Connected!");
+            OSSleepTicks(OSMillisecondsToTicks(tick));
+        } else if (res == 1) { // Connecting
+            ShowNotification("[AutoNet] Connecting...");
+            OSSleepTicks(OSMillisecondsToTicks(15000));
+        } else { // Disconnected / failed
+            ShowNotification("[AutoNet] Not connected, retrying...");
+            nn::ac::Connect();
+            OSSleepTicks(OSMillisecondsToTicks(5000));
         }
     }
-
-    Running = false;
+    running = false;
     return 0;
 }
+
+
 void StartNetThread() {
-    if (!Running) {
-        Stop = false;
-        Running = true;
-        
-        int argc = 0;
-
-        OSCreateThread(&netinitThread, NetMonitoring, argc, nullptr, netThreadStack + sizeof(netThreadStack), sizeof(netThreadStack), 30, 0);
-
-        OSResumeThread(&netinitThread);
+    if (!running) {
+        stop = false;
+        running = true;
+        OSCreateThread(&netThread, NetMonitoring, 0, nullptr, netThreadStack + sizeof(netThreadStack), sizeof(netThreadStack), 30, 0);
+        OSResumeThread(&netThread);
     }
 }
+
 void StopNetThread() {
-    if (Running) {
-        Stop = true;
-        OSJoinThread(&netinitThread, nullptr);
-        Running = false;
+    if (running) {
+        stop = true;
+        OSJoinThread(&netThread, nullptr);
+        running = false;
     }
 }

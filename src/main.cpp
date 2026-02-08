@@ -14,12 +14,12 @@ WUPS_PLUGIN_AUTHOR("Oniokami666");
 WUPS_PLUGIN_LICENSE("GPL");
 
 ON_APPLICATION_START() {
-    Net_init();
-    StartNetThread();
-
+    NotificationModule_InitLibrary();
+    // StartNetThread(); 
     ShowNotification("[AutoNet] initialized!");
 }
 
 ON_APPLICATION_ENDS() {
     StopNetThread();
+    NotificationModule_DeInitLibrary();
 }

@@ -1,24 +1,30 @@
-# Compiler
-CC := /opt/devkitpro/devkitPPC/bin/powerpc-eabi-g++
-AR := /opt/devkitpro/devkitPPC/bin/powerpc-eabi-ar
+PLUGIN_NAME := autonetworktester
+BUILD_DIR   := build
+SRC_DIR     := src
+INCLUDE_DIR := include
 
-# Directories
-SRC_DIR := src
-BUILD_DIR := build
-INCLUDE_DIRS := -Iinclude -Iinclude/notifications \
-                -I/opt/devkitpro/wut/include \
-                -I/opt/devkitpro/wups/include \
-                -I/opt/devkitpro/wums/include
+# DevkitPro/Wii U environment
+DEVKITPRO  ?= /opt/devkitpro
+DEVKITPPC  ?= $(DEVKITPRO)/devkitPPC
 
-LIB_DIRS := -L/opt/devkitpro/wut/lib \
-            -L/opt/devkitpro/wups/lib \
-            -L/opt/devkitpro/wums/lib
-
-LIBS := -lwut -lwups -lnotifications -lstdc++
+# Toolchain
+CC := $(DEVKITPPC)/bin/powerpc-eabi-g++
+AR := $(DEVKITPPC)/bin/powerpc-eabi-ar
 
 # Compiler flags
-CFLAGS := -O2 -Wall -std=c++17 $(INCLUDE_DIRS)
-LDFLAGS := $(LIB_DIRS) $(LIBS) -Wl,-Ttext,0x81800000
+CFLAGS := -O2 -Wall -std=c++17 \
+          -I$(INCLUDE_DIR) \
+          -I$(INCLUDE_DIR)/notifications \
+          -I$(DEVKITPRO)/wut/include \
+          -I$(DEVKITPRO)/wups/include \
+          -I$(DEVKITPRO)/wums/include
+
+# Linker flags
+LDFLAGS := -L$(DEVKITPRO)/wut/lib \
+           -L$(DEVKITPRO)/wups/lib \
+           -L$(DEVKITPRO)/wums/lib \
+           -lwut -lwups -lnotifications -lstdc++ \
+           -Wl,-Ttext,0x81800000
 
 # Source files
 SRCS := $(SRC_DIR)/main.cpp \
@@ -26,25 +32,29 @@ SRCS := $(SRC_DIR)/main.cpp \
         $(SRC_DIR)/Notification.cpp
 
 # Object files
-OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))
+OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
 
-# Output plugin
-OUTPUT := $(BUILD_DIR)/autonetworktester.wps
+# Output
+OUTPUT := $(BUILD_DIR)/$(PLUGIN_NAME).wps
 
-#--------------------------------------
+# -------------------------------
 # Rules
-#--------------------------------------
+# -------------------------------
 
 all: $(OUTPUT)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@mkdir -p $(BUILD_DIR)
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# Compile .cpp -> .o
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Link .o -> .wps
 $(OUTPUT): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS) -o $@
-	@echo "Plugin built: $@"
 
+# Clean build files
 clean:
 	rm -rf $(BUILD_DIR)
 
