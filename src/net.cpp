@@ -45,13 +45,13 @@ int NetMonitoring(int argc, const char **argv) {
         nn::Result res = nn::ac::GetConnectStatus(&stats);
 
         if (res == 0) { // Connected
-            ShowNotification("[AutoNet] Connected!");
+           // ShowNotification("[AutoNet] Connected!");
             OSSleepTicks(OSMillisecondsToTicks(tick));
         } else if (res == 1) { // Connecting
             ShowNotification("[AutoNet] Connecting...");
             OSSleepTicks(OSMillisecondsToTicks(15000));
         } else { // Disconnected / failed
-            ShowNotification("[AutoNet] Not connected, retrying...");
+           // ShowNotification("[AutoNet] Not connected, retrying...");
             nn::ac::Connect();
             OSSleepTicks(OSMillisecondsToTicks(5000));
         }
