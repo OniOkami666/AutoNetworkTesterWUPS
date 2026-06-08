@@ -11,16 +11,19 @@ extern "C" {
 #endif
 
 // Just some configuration stuff, no need to worry about it
-WUPS_PLUGIN_NAME("Auto Network Tester");
+WUPS_PLUGIN_NAME("AutoNetworkTesterWUPS");
 WUPS_PLUGIN_DESCRIPTION("A plugin to automatically connect to the selected wifi profile");
 WUPS_PLUGIN_VERSION("v1.0");
 WUPS_PLUGIN_AUTHOR("Oniokami666");
 WUPS_PLUGIN_LICENSE("GPL");
 
 ON_APPLICATION_START() {
-    NotificationModule_InitLibrary();
-    StartNetThread(); 
+    StartNetThread();
+
+    NotificationModule_Result res = NotificationModule_InitLibrary();
+    if (res == NOTIFICATION_MODULE_RESULT_SUCCESS) {
     ShowNotification("[AutoNet] initialized!");
+    }
 }
 
 ON_APPLICATION_ENDS() {
