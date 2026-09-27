@@ -7,4 +7,4 @@ COPY --from=ghcr.io/wiiu-env/libcurlwrapper:20260331 /artifacts $DEVKITPRO
 COPY --from=ghcr.io/wiiu-env/libsdutils:20260331 /artifacts $DEVKITPRO
 COPY --from=ghcr.io/wiiu-env/libmocha:20260331 /artifacts $DEVKITPRO
 
-WORKDIR C:\Users\OniOkami\Downloads\AutoNetworkTesterWUPS-main\AutoNetworkTesterWUPS-main\src
+WORKDIR 
